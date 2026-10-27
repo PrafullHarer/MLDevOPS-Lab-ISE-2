@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prediction Result — Iris Classifier</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a1a;
+            --bg-secondary: #12122a;
+            --bg-card: rgba(25, 25, 55, 0.8);
+            --text-primary: #e8e8f0;
+            --text-secondary: #9898b8;
+            --accent-1: #6C5CE7;
+            --accent-2: #00B894;
+            --accent-3: #E17055;
+            --border: rgba(108, 92, 231, 0.15);
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            --radius: 16px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .bg-animation {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none; z-index: 0; overflow: hidden;
+        }
+
+        .bg-animation .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.3;
+            animation: float 20s ease-in-out infinite;
+        }
+
+        .bg-animation .orb:nth-child(1) { width: 400px; height: 400px; background: {{ result.species_info.color }}; top: -100px; left: -100px; }
+        .bg-animation .orb:nth-child(2) { width: 300px; height: 300px; background: var(--accent-2); top: 50%; right: -50px; animation-delay: -7s; }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(30px, -40px) scale(1.1); }
+            50% { transform: translate(-20px, 20px) scale(0.95); }
+            75% { transform: translate(40px, 30px) scale(1.05); }
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Back link */
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            margin-bottom: 32px;
+            transition: color 0.3s ease;
+        }
+
+        .back-link:hover { color: var(--accent-1); }
+
+        /* Result hero */
+        .result-hero {
+            text-align: center;
+            margin-bottom: 32px;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .species-icon {
+            width: 100px;
+            height: 100px;
+            border-radius: 24px;
+            background: {{ result.species_info.color }}22;
+            border: 2px solid {{ result.species_info.color }}44;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            margin: 0 auto 20px;
+            animation: bounceIn 0.8s ease-out;
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .result-hero h1 {
+            font-size: 2.4rem;
+            font-weight: 700;
+            color: {{ result.species_info.color }};
+            margin-bottom: 8px;
+        }
+
+        .result-hero .description {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        /* Confidence */
+        .confidence-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 32px;
+            backdrop-filter: blur(20px);
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+            animation: fadeInUp 0.6s ease-out 0.2s both;
+        }
+
+        .confidence-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .confidence-header h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .confidence-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: {{ result.species_info.color }};
+        }
+
+        .prob-bar-group {
+            margin-bottom: 16px;
+        }
+
+        .prob-bar-group:last-child { margin-bottom: 0; }
+
+        .prob-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            font-size: 0.88rem;
+        }
+
+        .prob-label .name { color: var(--text-secondary); font-weight: 500; }
+        .prob-label .value { color: var(--text-primary); font-weight: 600; }
+
+        .prob-bar-bg {
+            width: 100%;
+            height: 10px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 100px;
+            overflow: hidden;
+        }
+
+        .prob-bar {
+            height: 100%;
+            border-radius: 100px;
+            transition: width 1.2s ease-out;
+            animation: barGrow 1.2s ease-out;
+        }
+
+        @keyframes barGrow { from { width: 0 !important; } }
+
+        .prob-bar.setosa { background: linear-gradient(90deg, #6C5CE7, #a855f7); }
+        .prob-bar.versicolor { background: linear-gradient(90deg, #00B894, #55efc4); }
+        .prob-bar.virginica { background: linear-gradient(90deg, #E17055, #fd79a8); }
+
+        /* Input summary */
+        .input-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 28px;
+            backdrop-filter: blur(20px);
+            box-shadow: var(--shadow);
+            animation: fadeInUp 0.6s ease-out 0.4s both;
+        }
+
+        .input-card h2 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text-secondary);
+        }
+
+        .input-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+
+        .input-item {
+            text-align: center;
+            padding: 16px 12px;
+            background: rgba(10, 10, 30, 0.5);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .input-item .label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .input-item .value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .input-item .unit {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        /* Try again button */
+        .try-again {
+            display: block;
+            width: 100%;
+            padding: 16px;
+            margin-top: 24px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-secondary);
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            animation: fadeInUp 0.6s ease-out 0.6s both;
+        }
+
+        .try-again:hover {
+            border-color: var(--accent-1);
+            color: var(--accent-1);
+            background: rgba(108, 92, 231, 0.05);
+        }
+
+        @media (max-width: 640px) {
+            .result-hero h1 { font-size: 1.8rem; }
+            .input-grid { grid-template-columns: repeat(2, 1fr); }
+            .confidence-card, .input-card { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-animation">
+        <div class="orb"></div>
+        <div class="orb"></div>
+    </div>
+
+    <div class="container">
+        <a href="/" class="back-link">← Back to classifier</a>
+
+        <div class="result-hero">
+            <div class="species-icon">
+                {% if result.species == 'setosa' %}🟣
+                {% elif result.species == 'versicolor' %}🟢
+                {% else %}🟠{% endif %}
+            </div>
+            <h1>{{ result.species_info.name }}</h1>
+            <p class="description">{{ result.species_info.description }}</p>
+        </div>
+
+        <div class="confidence-card">
+            <div class="confidence-header">
+                <h2>Classification Confidence</h2>
+                <div class="confidence-value">{{ result.confidence }}%</div>
+            </div>
+
+            <div class="prob-bar-group">
+                <div class="prob-label">
+                    <span class="name">🟣 Setosa</span>
+                    <span class="value">{{ result.probabilities.setosa }}%</span>
+                </div>
+                <div class="prob-bar-bg">
+                    <div class="prob-bar setosa" style="width: {{ result.probabilities.setosa }}%"></div>
+                </div>
+            </div>
+
+            <div class="prob-bar-group">
+                <div class="prob-label">
+                    <span class="name">🟢 Versicolor</span>
+                    <span class="value">{{ result.probabilities.versicolor }}%</span>
+                </div>
+                <div class="prob-bar-bg">
+                    <div class="prob-bar versicolor" style="width: {{ result.probabilities.versicolor }}%"></div>
+                </div>
+            </div>
+
+            <div class="prob-bar-group">
+                <div class="prob-label">
+                    <span class="name">🟠 Virginica</span>
+                    <span class="value">{{ result.probabilities.virginica }}%</span>
+                </div>
+                <div class="prob-bar-bg">
+                    <div class="prob-bar virginica" style="width: {{ result.probabilities.virginica }}%"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="input-card">
+            <h2>Your Input</h2>
+            <div class="input-grid">
+                <div class="input-item">
+                    <div class="label">Sepal Length</div>
+                    <div class="value">{{ result.input.sepal_length }} <span class="unit">cm</span></div>
+                </div>
+                <div class="input-item">
+                    <div class="label">Sepal Width</div>
+                    <div class="value">{{ result.input.sepal_width }} <span class="unit">cm</span></div>
+                </div>
+                <div class="input-item">
+                    <div class="label">Petal Length</div>
+                    <div class="value">{{ result.input.petal_length }} <span class="unit">cm</span></div>
+                </div>
+                <div class="input-item">
+                    <div class="label">Petal Width</div>
+                    <div class="value">{{ result.input.petal_width }} <span class="unit">cm</span></div>
+                </div>
+            </div>
+        </div>
+
+        <a href="/" class="try-again">🔄 Classify Another Flower</a>
+    </div>
+</body>
+</html>
